@@ -1,41 +1,41 @@
-pipeline{
+pipeline {
     agent any
-    tools{
+    tools {
         jdk 'jdk17'
         nodejs 'node16'
     }
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner'
     }
     stages {
-        stage('clean workspace'){
-            steps{
+        stage('clean workspace') {
+            steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git'){
-            steps{
+        stage('Checkout from Git') {
+            steps {
                 git branch: 'main', url: 'https://github.com/RaviRoy4763/node.js-sonar-argocd-helm-k8s'
             }
         }
-        stage("Sonarqube Analysis "){
-            steps{
+        stage('Sonarqube Analysis') {
+            steps {
                 withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=ticktack \
-                    -Dsonar.projectKey=ticktack '''
+                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=ticktack \
+                    -Dsonar.projectKey=ticktack'''
                 }
             }
         }
-        stage("quality gate"){
-           steps {
+        stage('Quality Gate') {
+            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
                 }
-            } 
+            }
         }
         stage('Install Dependencies') {
             steps {
-                sh "npm install"
+                sh 'npm install'
             }
         }
         stage('OWASP FS SCAN') {
@@ -46,57 +46,58 @@ pipeline{
         }
         stage('TRIVY FS SCAN') {
             steps {
-                sh "trivy fs . > trivyfs.txt"
+                sh 'trivy fs . > trivyfs.txt'
             }
         }
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker build -t tictak ."
-                       sh "docker tag tictak ravi4763/tictak:latest "
-                       sh "docker push ravi4763/tictak:latest "
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh 'docker build -t tictak .'
+                        sh 'docker tag tictak ravi4763/tictak:latest'
+                        sh 'docker push ravi4763/tictak:latest'
                     }
                 }
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image ravi4763/tictak:latest > trivyimage.txt" 
+        stage('TRIVY') {
+            steps {
+                sh 'trivy image ravi4763/tictak:latest > trivyimage.txt'
             }
         }
-        stage('Deploy to container'){
-            steps{
+        stage('Deploy to container') {
+            steps {
                 sh '''
-            # Stop any container using port 8081
-            CONTAINER_ID=$(docker ps -q --filter "publish=8081")
-            if [ ! -z "$CONTAINER_ID" ]; then
-                docker stop $CONTAINER_ID
-                docker rm $CONTAINER_ID
-            fi
+                # Stop any container using port 8081
+                CONTAINER_ID=$(docker ps -q --filter "publish=8081")
+                if [ ! -z "$CONTAINER_ID" ]; then
+                    docker stop $CONTAINER_ID
+                    docker rm $CONTAINER_ID
+                fi
 
-            # Run the new container
-            docker run -d --restart unless-stopped -p 8081:80 ravi4763/tictak:latest
-        '''
-            }
-        }
-        stage('Update Deployment File') {
-        environment {
-            GIT_REPO_NAME = "node.js-sonar-argocd-helm-k8s"
-            GIT_USER_NAME = "RaviRoy4763"
-        }
-        steps {
-            withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                sh '''
-                    git config user.email "ravitejaroy4763@gmail.com"
-                    git config user.name "Raviteja"
-                    BUILD_NUMBER=${BUILD_NUMBER}
-                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" main/Kubernets/deployment.yml
-                    git add main/Kubernets/deployment.yml
-                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                # Run the new container
+                docker run -d --restart unless-stopped -p 8081:80 ravi4763/tictak:latest
                 '''
             }
         }
-    }
-}
+        stage('Update Deployment File') {
+            environment {
+                GIT_REPO_NAME = 'node.js-sonar-argocd-helm-k8s'
+                GIT_USER_NAME = 'RaviRoy4763'
+            }
+            steps {
+                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                    sh '''
+                        git config user.email "ravitejaroy4763@gmail.com"
+                        git config user.name "Raviteja"
+                        BUILD_NUMBER=${BUILD_NUMBER}
+                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" main/Kubernets/deployment.yml
+                        git add main/Kubernets/deployment.yml
+                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                    '''
+                }
+            }
+        }
+    } // end of stages
+} // end of pipeline
