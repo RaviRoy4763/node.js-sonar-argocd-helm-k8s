@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: tictac
-          image: ravi4763/tictak:replaceImageTag
+          image: ravi4763/tictak:12
           ports:
             - containerPort: 80
