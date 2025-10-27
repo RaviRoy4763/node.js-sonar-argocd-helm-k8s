@@ -75,23 +75,35 @@ pipeline {
             }
         }
         stage('Update Deployment File') {
-            environment {
-                GIT_REPO_NAME = 'node.js-sonar-argocd-helm-k8s'
-                GIT_USER_NAME = 'RaviRoy4763'
-            }
-            steps {
-                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                    sh '''
-                        git config user.email "ravitejaroy4763@gmail.com"
-                        git config user.name "Raviteja"
-                        BUILD_NUMBER=${BUILD_NUMBER}
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" Kubernets/deployment.yml
-                        git add Kubernets/deployment.yml
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                    '''
-                }
-            }
+    environment {
+        GIT_REPO_NAME = 'node.js-sonar-argocd-helm-k8s'
+        GIT_USER_NAME = 'RaviRoy4763'
+    }
+    steps {
+        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+            sh '''
+                git config user.email "ravitejaroy4763@gmail.com"
+                git config user.name "Raviteja"
+                BUILD_NUMBER=${BUILD_NUMBER}
+
+                # Update the deployment file
+                sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" Kubernets/deployment.yml
+
+                # Stage the file
+                git add Kubernets/deployment.yml
+
+                # Commit only if there are changes
+                git diff --cached --quiet || git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+
+                # Pull remote changes first to avoid push rejection
+                git pull --rebase https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
+
+                # Push changes
+                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+            '''
         }
+    }
+}
+
     } // end of stages
 } // end of pipeline
