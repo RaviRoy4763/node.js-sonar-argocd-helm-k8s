@@ -101,11 +101,7 @@ function App() {
             <Award className="h-8 w-8" />
             Tic Tac Toe
           </h1>
-<<<<<<< HEAD
-          <p className="text-indigo-200 mt-1">THE classic game reimagined</p>
-=======
-          <p className="text-indigo-200 mt-1">The classic game reimagined</p>
->>>>>>> fb0bbd6 (changes2)
+          <p className="text-indigo-200 mt-1">A classic The game reimagined</p>
         </div>
         
         <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
